@@ -1,0 +1,20 @@
+# Copiar este archivo como "terraform.tfvars" y completar con los valores reales
+
+project_id = "arquitecturacloud-fignalo"
+region     = "southamerica-west1"
+zone       = "southamerica-west1-a"
+
+# Ambiente a desplegar: "prod", "dev" o "qa"
+environment = "prod"
+
+# Endpoints de Azure AI Foundry (Procesamiento de documentos / IA)
+azure_ai_foundry_endpoint = "https://arquitecturacloud-fignalo-foundry-prod.services.ai.azure.com"
+azure_ai_foundry_api_key  = "AZURE_AI_FOUNDRY_API_KEY"
+
+# Contraseña de Cloud SQL
+db_password = "PASSWORD_SQL"
+
+# Parámetros VPN IPsec (Aplica solo cuando environment = "prod")
+onpremise_vpn_peer_ip   = "192.168.1.0"
+fronterizos_vpn_peer_ip = "192.168.0.128"
+vpn_shared_secret       = "PSK_IPSEC_SEGURO"
