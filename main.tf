@@ -407,7 +407,6 @@ resource "google_sql_database_instance" "main_db" {
   database_version    = "SQLSERVER_2022_STANDARD"
   region              = var.region
   root_password       = var.db_password
-  deletion_protection = false
 
   settings {
     tier              = var.environment == "prod" ? "db-custom-4-16384" : "db-custom-2-4096"
