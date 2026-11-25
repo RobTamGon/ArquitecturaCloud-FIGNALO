@@ -43,7 +43,7 @@ variable "zone" {
 }
 
 variable "environment" {
-  description = var.environment
+  description = "Ambiente a desplegar: prod, dev o qa"
   type        = string
   default     = "prod"
 
@@ -68,15 +68,15 @@ variable "azure_ai_foundry_api_key" {
 
 # Configuración de VPN hacia On-Premise y Puestos Fronterizos (Solo PROD)
 variable "onpremise_vpn_peer_ip" {
-  description = "192.168.1.0"
+  description = "192.172.1.0"
   type        = string
-  default     = "192.168.1.0"
+  default     = "192.172.1.0"
 }
 
 variable "fronterizos_vpn_peer_ip" {
-  description = "192.168.0.128"
+  description = "192.172.0.128"
   type        = string
-  default     = "192.168.0.128"
+  default     = "192.172.0.128"
 }
 
 variable "vpn_shared_secret" {
@@ -136,8 +136,8 @@ locals {
         preproc_ia    = "10.0.0.64/26"  # Cloud Function Procesamiento Documentos
         ia_endpoint   = "10.0.0.192/28" # Conectividad hacia Azure AI Foundry
       }
-      onpremise_cidrs   = ["192.168.1.0/28"]
-      fronterizos_cidrs = ["192.168.0.0/24"]
+      onpremise_cidrs   = ["192.172.1.0/28"]
+      fronterizos_cidrs = ["192.172.0.0/24"]
     }
     dev = {
       vpc_cidr = "10.1.0.0/22"
@@ -148,7 +148,7 @@ locals {
         datos         = "10.1.0.56/29"  # Datos DEV
         integracion   = "10.1.0.32/28"  # Integración DEV (Functions)
         simuladores   = "10.1.0.64/29"  # Simuladores B3000 y GEPOL
-        ia_endpoint   = "10.1.0.72/29"  # Subred IA DEV -> Azure AI Foundry
+        ia_endpoint   = "10.1.0.80/28"  # Subred IA DEV -> Azure AI Foundry
       }
       onpremise_cidrs   = []
       fronterizos_cidrs = []
@@ -186,7 +186,7 @@ resource "random_id" "suffix" {
 # 1. RED VIRTUAL (VPC) Y SUBREDES POR AMBIENTE
 # ==============================================================================
 resource "google_compute_network" "vpc" {
-  name                    = "vpc-arquitecturacloud-fignalo-${var.environment}"
+  name                    = "vpc-fignalo-${var.environment}"
   auto_create_subnetworks = false
   routing_mode            = "REGIONAL"
   depends_on              = [google_project_service.apis]
@@ -226,13 +226,13 @@ resource "google_vpc_access_connector" "ia_connector" {
 
 # Cloud Router y Cloud NAT para salida controlada hacia APIs externas y Azure AI Foundry
 resource "google_compute_router" "router" {
-  name    = "router-arquitecturacloud-fignalo-${var.environment}"
+  name    = "router-fignalo-${var.environment}"
   region  = var.region
   network = google_compute_network.vpc.id
 }
 
 resource "google_compute_router_nat" "nat" {
-  name                               = "nat-arquitecturacloud-fignalo-${var.environment}"
+  name                               = "nat-fignalo-${var.environment}"
   router                             = google_compute_router.router.name
   region                             = var.region
   nat_ip_allocate_option             = "AUTO_ONLY"
@@ -278,14 +278,14 @@ resource "google_compute_firewall" "allow_egress_external_apis" {
 # ==============================================================================
 resource "google_compute_vpn_gateway" "vpn_gw" {
   count   = var.environment == "prod" ? 1 : 0
-  name    = "vpngw-arquitecturacloud-fignalo-dmz-prod"
+  name    = "vpngw-fignalo-dmz-prod"
   network = google_compute_network.vpc.id
   region  = var.region
 }
 
 resource "google_compute_address" "vpn_static_ip" {
   count  = var.environment == "prod" ? 1 : 0
-  name   = "ip-vpn-arquitecturacloud-fignalo-prod"
+  name   = "ip-vpn-fignalo-prod"
   region = var.region
 }
 
@@ -315,7 +315,7 @@ resource "google_compute_forwarding_rule" "fr_udp4500" {
   target      = google_compute_vpn_gateway.vpn_gw[0].id
 }
 
-# Túnel 1: Cloud <-> On-Premise (B3000 / GEPOL - 192.168.1.0/28)
+# Túnel 1: Cloud <-> On-Premise (B3000 / GEPOL - 192.172.1.0/28)
 resource "google_compute_vpn_tunnel" "tunnel_onpremise" {
   count                   = var.environment == "prod" ? 1 : 0
   name                    = "tunnel-onpremise-dmz"
@@ -336,12 +336,12 @@ resource "google_compute_route" "route_onpremise" {
   count       = var.environment == "prod" ? 1 : 0
   name        = "route-to-onpremise"
   network     = google_compute_network.vpc.name
-  dest_range  = "192.168.1.0/28"
+  dest_range  = local.current_net.onpremise_cidrs[0]
   priority    = 1000
   next_hop_vpn_tunnel = google_compute_vpn_tunnel.tunnel_onpremise[0].id
 }
 
-# Túnel 2: Cloud <-> Puestos Fronterizos PDI (192.168.0.0/24)
+# Túnel 2: Cloud <-> Puestos Fronterizos PDI (192.172.0.0/24)
 resource "google_compute_vpn_tunnel" "tunnel_fronterizos" {
   count                   = var.environment == "prod" ? 1 : 0
   name                    = "tunnel-puestos-fronterizos"
@@ -362,7 +362,7 @@ resource "google_compute_route" "route_fronterizos" {
   count       = var.environment == "prod" ? 1 : 0
   name        = "route-to-fronterizos"
   network     = google_compute_network.vpc.name
-  dest_range  = "192.168.0.0/24"
+  dest_range  = local.current_net.fronterizos_cidrs[0]
   priority    = 1000
   next_hop_vpn_tunnel = google_compute_vpn_tunnel.tunnel_fronterizos[0].id
 }
@@ -403,7 +403,7 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 
 # Instancia Cloud SQL (Equivalente a Azure SQL + Réplica/HA en PROD)
 resource "google_sql_database_instance" "main_db" {
-  name             = "sql-arquitecturacloud-fignalo-${var.environment}-${random_id.suffix.hex}"
+  name             = "sql-fignalo-${var.environment}-${random_id.suffix.hex}"
   database_version = "SQLSERVER_2022_STANDARD"
   region           = var.region
   root_password    = var.db_password
@@ -429,13 +429,13 @@ resource "google_sql_database_instance" "main_db" {
 }
 
 resource "google_sql_database" "tramites_db" {
-  name     = "arquitecturacloud-fignalo_${var.environment}"
+  name     = "fignalo_${var.environment}"
   instance = google_sql_database_instance.main_db.name
 }
 
 # Cloud Storage para Documentos (Equivalente a Azure Files)
 resource "google_storage_bucket" "documentos_bucket" {
-  name                        = "arquitecturacloud-fignalo-documentos-${var.environment}-${random_id.suffix.hex}"
+  name                        = "fignalo-documentos-${var.environment}-${random_id.suffix.hex}"
   location                    = var.region
   uniform_bucket_level_access = true
   force_destroy               = var.environment != "prod"
@@ -450,9 +450,9 @@ resource "google_storage_bucket" "documentos_bucket" {
 # ==============================================================================
 # Buckets para alojar Portales Estáticos (Equivalente a Azure Static Web Apps)
 resource "google_storage_bucket" "portal_ciudadanos" {
-  name                        = "arquitecturacloud-fignalo-portal-ciudadanos-${var.environment}-${random_id.suffix.hex}"
+  name                        = "fignalo-portal-ciudadanos-${var.environment}-${random_id.suffix.hex}"
   location                    = var.region
-  uniform_bucket_level_access = true
+  uniform_bucket_level_access = false
   force_destroy               = var.environment != "prod"
 
   website {
@@ -462,9 +462,9 @@ resource "google_storage_bucket" "portal_ciudadanos" {
 }
 
 resource "google_storage_bucket" "portal_funcionarios" {
-  name                        = "arquitecturacloud-fignalo-portal-funcionarios-${var.environment}-${random_id.suffix.hex}"
+  name                        = "fignalo-portal-funcionarios-${var.environment}-${random_id.suffix.hex}"
   location                    = var.region
-  uniform_bucket_level_access = true
+  uniform_bucket_level_access = false
   force_destroy               = var.environment != "prod"
 
   website {
@@ -476,7 +476,7 @@ resource "google_storage_bucket" "portal_funcionarios" {
 # Política WAF (Cloud Armor - Equivalente a Application Gateway + WAF en PROD)
 resource "google_compute_security_policy" "waf_policy" {
   count = var.environment == "prod" ? 1 : 0
-  name  = "waf-arquitecturacloud-fignalo-ciudadanos-prod"
+  name  = "waf-fignalo-ciudadanos-prod"
 
   rule {
     action   = "deny(403)"
@@ -506,7 +506,7 @@ resource "google_compute_security_policy" "waf_policy" {
 # 6. CAPA DE CÓMPUTO: BACKEND API Y MICROSERVICIOS DE INTEGRACIÓN / IA
 # ==============================================================================
 resource "google_service_account" "app_sa" {
-  account_id   = "sa-arquitecturacloud-fignalo-workloads-${var.environment}"
+  account_id   = "sa-fignalo-workloads-${var.environment}"
   display_name = "Service Account Workloads PDI (${var.environment})"
 }
 
@@ -531,7 +531,7 @@ resource "google_cloud_run_v2_service" "backend_api" {
     }
 
     containers {
-      image = "us-docker.pkg.dev/cloudrun/container/backendimage" # Reemplazar por imagen real del Backend API
+      image = "us-docker.pkg.dev/cloudrun/container/hello" # Reemplazar por imagen real del Backend API
 
       env {
         name  = "ENVIRONMENT"
@@ -564,7 +564,7 @@ resource "google_cloud_run_v2_service" "fn_consulta_antecedentes" {
     }
 
     containers {
-      image = "us-docker.pkg.dev/cloudrun/container/functionlookupimage" # Reemplazar por imagen de la función
+      image = "us-docker.pkg.dev/cloudrun/container/hello" # Reemplazar por imagen de la función
 
       env {
         name  = "ENVIRONMENT"
@@ -598,7 +598,7 @@ resource "google_cloud_run_v2_service" "fn_procesamiento_ia" {
     }
 
     containers {
-      image = "us-docker.pkg.dev/cloudrun/container/functiondocsimage" # Reemplazar por imagen OCR/IA
+      image = "us-docker.pkg.dev/cloudrun/container/hello" # Reemplazar por imagen OCR/IA
 
       env {
         name  = "ENVIRONMENT"

@@ -15,6 +15,6 @@ azure_ai_foundry_api_key  = "AZURE_AI_FOUNDRY_API_KEY"
 db_password = "PASSWORD_SQL"
 
 # Parámetros VPN IPsec (Aplica solo cuando environment = "prod")
-onpremise_vpn_peer_ip   = "192.168.1.0"
-fronterizos_vpn_peer_ip = "192.168.0.128"
+onpremise_vpn_peer_ip   = "192.172.1.0"
+fronterizos_vpn_peer_ip = "192.172.0.128"
 vpn_shared_secret       = "PSK_IPSEC_SEGURO"
