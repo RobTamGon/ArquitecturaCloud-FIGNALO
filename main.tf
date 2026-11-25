@@ -133,8 +133,8 @@ locals {
         backend       = "10.0.0.160/27" # Cloud Run Backend API
         datos         = "10.0.0.224/29" # Cloud SQL + Cloud Storage
         consultas     = "10.0.0.0/26"   # Cloud Function Consulta Antecedentes
-        preproc_ia    = "10.0.0.64/26"  # Cloud Function Procesamiento Documentos
-        ia_endpoint   = "10.0.0.192/28" # Conectividad hacia Azure AI Foundry
+        preproc-ia    = "10.0.0.64/26"  # Cloud Function Procesamiento Documentos
+        ia-endpoint   = "10.0.0.192/28" # Conectividad hacia Azure AI Foundry
       }
       onpremise_cidrs   = ["192.172.1.0/28"]
       fronterizos_cidrs = ["192.172.0.0/24"]
@@ -148,7 +148,7 @@ locals {
         datos         = "10.1.0.56/29"  # Datos DEV
         integracion   = "10.1.0.32/28"  # Integración DEV (Functions)
         simuladores   = "10.1.0.64/29"  # Simuladores B3000 y GEPOL
-        ia_endpoint   = "10.1.0.80/28"  # Subred IA DEV -> Azure AI Foundry
+        ia-endpoint   = "10.1.0.80/28"  # Subred IA DEV -> Azure AI Foundry
       }
       onpremise_cidrs   = []
       fronterizos_cidrs = []
@@ -161,7 +161,7 @@ locals {
         datos         = "10.2.1.0/27"   # Datos QA
         integracion   = "10.2.0.128/26" # Integración QA (Functions)
         simuladores   = "10.2.1.32/27"  # Simuladores QA
-        ia_endpoint   = "10.2.1.64/27"  # Subred IA QA -> Azure AI Foundry
+        ia-endpoint   = "10.2.1.64/27"  # Subred IA QA -> Azure AI Foundry
       }
       onpremise_cidrs   = []
       fronterizos_cidrs = []
@@ -217,7 +217,7 @@ resource "google_vpc_access_connector" "ia_connector" {
   name          = "conn-ia-${var.environment}"
   region        = var.region
   subnet {
-    name = google_compute_subnetwork.subnets["ia_endpoint"].name
+    name = google_compute_subnetwork.subnets["ia-endpoint"].name
   }
   min_instances = 2
   max_instances = 3
