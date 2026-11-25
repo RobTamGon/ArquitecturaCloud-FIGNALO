@@ -130,7 +130,7 @@ locals {
         waf           = "10.0.0.208/29" # Application Gateway + WAF (Cloud Armor + LB)
         firewall      = "10.0.0.216/29" # Firewall / Egreso controlado
         frontend      = "10.0.0.128/27" # Portales Ciudadanos y Funcionarios
-        backend       = "10.0.0.160/27" # Cloud Run Backend API
+        backend       = "10.0.0.160/28" # Cloud Run Backend API
         datos         = "10.0.0.224/29" # Cloud SQL + Cloud Storage
         consultas     = "10.0.0.0/26"   # Cloud Function Consulta Antecedentes
         preproc-ia    = "10.0.0.64/26"  # Cloud Function Procesamiento Documentos
@@ -157,7 +157,7 @@ locals {
       vpc_cidr = "10.2.0.0/16"
       subnets = {
         frontend      = "10.2.0.0/26"   # Frontend QA
-        backend       = "10.2.0.64/26"  # Backend QA
+        backend       = "10.2.0.64/28"  # Backend QA
         datos         = "10.2.1.0/27"   # Datos QA
         integracion   = "10.2.0.128/26" # Integración QA (Functions)
         simuladores   = "10.2.1.32/27"  # Simuladores QA
@@ -341,7 +341,7 @@ resource "google_compute_route" "route_onpremise" {
   next_hop_vpn_tunnel = google_compute_vpn_tunnel.tunnel_onpremise[0].id
 }
 
-# Túnel 2: Cloud <-> Puestos Fronterizos PDI (192.172.0.0/24)
+# Túnel 2: Cloud <-> Puestos Fronterizos Arquitectura Cloud (192.172.0.0/24)
 resource "google_compute_vpn_tunnel" "tunnel_fronterizos" {
   count                   = var.environment == "prod" ? 1 : 0
   name                    = "tunnel-puestos-fronterizos"
@@ -507,7 +507,7 @@ resource "google_compute_security_policy" "waf_policy" {
 # ==============================================================================
 resource "google_service_account" "app_sa" {
   account_id   = "sa-fignalo-workloads-${var.environment}"
-  display_name = "Service Account Workloads PDI (${var.environment})"
+  display_name = "Service Account Workloads Arquitectura Cloud (${var.environment})"
 }
 
 resource "google_secret_manager_secret_iam_member" "sa_secret_access" {
