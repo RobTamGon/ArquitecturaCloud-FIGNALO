@@ -403,10 +403,11 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 
 # Instancia Cloud SQL (Equivalente a Azure SQL + Réplica/HA en PROD)
 resource "google_sql_database_instance" "main_db" {
-  name             = "sql-fignalo-${var.environment}-${random_id.suffix.hex}"
-  database_version = "SQLSERVER_2022_STANDARD"
-  region           = var.region
-  root_password    = var.db_password
+  name                = "sql-fignalo-${var.environment}-${random_id.suffix.hex}"
+  database_version    = "SQLSERVER_2022_STANDARD"
+  region              = var.region
+  root_password       = var.db_password
+  deletion_protection = false
 
   settings {
     tier              = var.environment == "prod" ? "db-custom-4-16384" : "db-custom-2-4096"
